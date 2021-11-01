@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu android:background="@color/darkTheme" xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item android:id="@+id/menu_setting" android:textColor="@color/textChar" android:title="Settings" android:icon="@drawable/setting_button">
+
+        </item>
+
+    </group>
+
+    <item android:title="power">
+        <menu>
+            <item android:id="@+id/menu_home" android:textColor="@color/textChar" android:title="Home" android:icon="@drawable/home">
+
+            </item>
+        </menu>
+    </item>
+
+</menu>
