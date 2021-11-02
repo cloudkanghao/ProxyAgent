@@ -3,6 +3,9 @@ package com.kh.proxyagent.Fragments;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Base64;
+import android.util.Base64OutputStream;
+import android.util.Log;
 import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +21,24 @@ import com.kh.proxyagent.R;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
+import static android.content.Context.MODE_PRIVATE;
+
 public class SettingFragment extends Fragment {
 
     private View view;
@@ -32,7 +53,7 @@ public class SettingFragment extends Fragment {
         port = view.findViewById(R.id.port);
         saveButton = view.findViewById(R.id.settingSubmit);
 
-        SharedPreferences preferences = this.getActivity().getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences preferences = this.getActivity().getPreferences(MODE_PRIVATE);
 
         String proxyAddressValue = preferences.getString("proxyAddress", "");
         String portValue = preferences.getString("port", "");
@@ -46,6 +67,7 @@ public class SettingFragment extends Fragment {
 
                 // 1: FIX POWER ON CLICKING SETTING BUGS
                 // 2: CHECK IF CONNECTED TO WIFI FIRST
+
                 String proxyAddressValue = proxyAddress.getText().toString(), portValue = port.getText().toString();
                 boolean validPort = true;
                 try {
@@ -55,7 +77,8 @@ public class SettingFragment extends Fragment {
                 }
 
                 if(Patterns.IP_ADDRESS.matcher(proxyAddressValue).matches() && validPort) {
-                    SharedPreferences preferences = getActivity().getPreferences(Context.MODE_PRIVATE);
+
+                    SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
                     SharedPreferences.Editor editor = preferences.edit();
 
                     editor.putString("proxyAddress", proxyAddressValue);
@@ -69,7 +92,13 @@ public class SettingFragment extends Fragment {
                     homeFragment.setArguments(bundle);
                     getFragmentManager().beginTransaction().replace(R.id.fragment_container, homeFragment).commit();
 
-                    Toast.makeText(getContext(), "Setting updated!", Toast.LENGTH_SHORT).show();
+                    if(certificateIsImported())
+                        Toast.makeText(getContext(), "Setting updated!", Toast.LENGTH_SHORT).show();
+                    else {
+                        proxySetting(true);
+                        installCertificate();
+//                        Toast.makeText(getContext(), "Setting not updated!", Toast.LENGTH_SHORT).show();
+                    }
                 }
                 else {
                     Toast.makeText(getContext(), "invalid IP or port", Toast.LENGTH_SHORT).show();
@@ -78,5 +107,154 @@ public class SettingFragment extends Fragment {
             }
         });
         return view;
+    }
+
+    private boolean certificateIsImported() {
+        File cert = new File(getContext().getFilesDir(), "burp.der");
+        if (cert.exists())
+            return true;
+        else
+            return false;
+    }
+
+    private void proxySetting(boolean on) {
+        if (on) {
+            try {
+                Process su = Runtime.getRuntime().exec("su");
+                DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+
+                outputStream.writeBytes("settings put global http_proxy " + proxyAddress.getText().toString() + ":" + port.getText().toString() + "\n");
+                outputStream.flush();
+
+                outputStream.writeBytes("exit\n");
+                outputStream.flush();
+                su.waitFor();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            try {
+                Process su = Runtime.getRuntime().exec("su");
+                DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+
+                outputStream.writeBytes("settings put global http_proxy :0\n");
+                outputStream.flush();
+
+                outputStream.writeBytes("exit\n");
+                outputStream.flush();
+                su.waitFor();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void installCertificate() {
+
+        String url = "http://burp/cert";
+        Request request = new Request.Builder().url(url).build();
+        OkHttpClient client = new OkHttpClient();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                e.printStackTrace();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if(response.isSuccessful()) {
+                    byte[] res = response.body().bytes();
+
+                    saveBurpDerFile(res);
+                    convertDerToPem();
+                    proxySetting(false);
+//                    moveCertToRootAuthority();
+                }
+            }
+        });
+    }
+
+    private String convertToBase64(File file) throws IOException {
+
+        InputStream inputStream = null;//You can get an inputStream using any IO API
+        inputStream = new FileInputStream(file);
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Base64OutputStream output64 = new Base64OutputStream(output, Base64.DEFAULT);
+        try {
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                output64.write(buffer, 0, bytesRead);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        output64.close();
+
+        return output.toString();
+    }
+
+    private void saveBurpDerFile(byte[] res) throws IOException {
+
+        FileOutputStream fos = null;
+
+        fos = getActivity().openFileOutput("burp.der", MODE_PRIVATE);
+        fos.write(res);
+    }
+
+    private void convertDerToPem() throws IOException {
+        FileInputStream fis = null;
+        FileOutputStream fos = null;
+
+        fis = getActivity().openFileInput("burp.der");
+        InputStreamReader isr = new InputStreamReader(fis);
+        BufferedReader br = new BufferedReader(isr);
+        StringBuilder sb = new StringBuilder();
+        String text;
+
+        while ((text = br.readLine()) != null) {
+            sb.append(text).append("\n");
+        }
+
+        Log.i("tag", "saved at:" + getContext().getFilesDir());
+
+        String top = "-----BEGIN CERTIFICATE-----\n", bottom = "-----END CERTIFICATE-----\n";
+        File file = new File(getContext().getFilesDir(), "burp.der");
+        String pem = convertToBase64(file);
+        pem = top + pem;
+        pem += bottom;
+        fos = getContext().openFileOutput("burp.pem", MODE_PRIVATE);
+        fos.write(pem.getBytes());
+    }
+
+    private void moveCertToRootAuthority() {
+        //9a5ba575.0
+        try {
+            Process su = Runtime.getRuntime().exec("su");
+            DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+
+            outputStream.writeBytes("mv " + getContext().getFilesDir() + "/burp.pem /system/etc/security/cacerts/9a5ba575.0\n");
+            outputStream.flush();
+
+            outputStream.writeBytes("exit\n");
+            outputStream.flush();
+            su.waitFor();
+
+            Process su2 = Runtime.getRuntime().exec("su");
+            DataOutputStream outputStream2 = new DataOutputStream(su2.getOutputStream());
+
+            outputStream2.writeBytes("chmod 644 /system/etc/security/cacerts/9a5ba575.0\n");
+            outputStream2.flush();
+
+            outputStream2.writeBytes("exit\n");
+            outputStream2.flush();
+            su2.waitFor();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

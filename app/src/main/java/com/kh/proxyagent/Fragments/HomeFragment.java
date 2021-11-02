@@ -69,11 +69,7 @@ public class HomeFragment extends Fragment {
                 public void onClick(View v) {
                     if (variableSet) {
                         if (!toggle) {
-//                            try {
-//                                Runtime.getRuntime().exec("settings put global http_proxy " + proxyAddress + ":" + port);
-//                            } catch (IOException e) {
-//                                e.printStackTrace();
-//                            }
+
                             try {
                                 Process su = Runtime.getRuntime().exec("su");
                                 DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
