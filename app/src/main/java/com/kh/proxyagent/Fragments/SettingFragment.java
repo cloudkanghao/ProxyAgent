@@ -2,6 +2,8 @@ package com.kh.proxyagent.Fragments;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Base64OutputStream;
@@ -17,6 +19,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.kh.proxyagent.CertImportDialog;
 import com.kh.proxyagent.R;
 
 import org.jetbrains.annotations.NotNull;
@@ -44,6 +47,7 @@ public class SettingFragment extends Fragment {
     private View view;
     private EditText proxyAddress, port;
     private Button saveButton;
+    private final String TOGGLE_STATE = "toggleState";
 
     @Nullable
     @Override
@@ -63,11 +67,6 @@ public class SettingFragment extends Fragment {
         saveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                Toast.makeText(getContext(), "trying hard to save...", Toast.LENGTH_SHORT).show();
-
-                // 1: FIX POWER ON CLICKING SETTING BUGS
-                // 2: CHECK IF CONNECTED TO WIFI FIRST
-
                 String proxyAddressValue = proxyAddress.getText().toString(), portValue = port.getText().toString();
                 boolean validPort = true;
                 try {
@@ -76,37 +75,51 @@ public class SettingFragment extends Fragment {
                     validPort = false;
                 }
 
-                if(Patterns.IP_ADDRESS.matcher(proxyAddressValue).matches() && validPort) {
+                if(wifiConnected()) {
+                    if (Patterns.IP_ADDRESS.matcher(proxyAddressValue).matches() && validPort) {
 
-                    SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
-                    SharedPreferences.Editor editor = preferences.edit();
+                        SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
+                        SharedPreferences.Editor editor = preferences.edit();
 
-                    editor.putString("proxyAddress", proxyAddressValue);
-                    editor.putString("port", portValue);
-                    editor.commit();
+                        editor.putString("proxyAddress", proxyAddressValue);
+                        editor.putString("port", portValue);
+                        editor.commit();
 
-                    Bundle bundle = new Bundle();
-                    bundle.putString("proxyAddress", proxyAddressValue);
-                    bundle.putString("port", portValue);
-                    HomeFragment homeFragment = new HomeFragment();
-                    homeFragment.setArguments(bundle);
-                    getFragmentManager().beginTransaction().replace(R.id.fragment_container, homeFragment).commit();
+                        Bundle bundle = new Bundle();
+                        bundle.putString("proxyAddress", proxyAddressValue);
+                        bundle.putString("port", portValue);
+                        HomeFragment homeFragment = new HomeFragment();
+                        homeFragment.setArguments(bundle);
+                        getFragmentManager().beginTransaction().replace(R.id.fragment_container, homeFragment).commit();
 
-                    if(certificateIsImported())
-                        Toast.makeText(getContext(), "Setting updated!", Toast.LENGTH_SHORT).show();
-                    else {
-                        proxySetting(true);
-                        installCertificate();
-//                        Toast.makeText(getContext(), "Setting not updated!", Toast.LENGTH_SHORT).show();
+                        if (certificateIsImported())
+                            Toast.makeText(getContext(), "Setting updated!", Toast.LENGTH_SHORT).show();
+                        else {
+//                            CertImportDialog certImportDialog = new CertImportDialog();
+//                            certImportDialog.show(getFragmentManager(), "Cert import");
+//                            if(certImportDialog.getUserOption()) {
+                            proxySetting(true);
+                            installCertificate();
+//                            }
+                            //                        Toast.makeText(getContext(), "Setting not updated!", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Toast.makeText(getContext(), "invalid IP or port", Toast.LENGTH_SHORT).show();
                     }
                 }
                 else {
-                    Toast.makeText(getContext(), "invalid IP or port", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Please connect to WiFi", Toast.LENGTH_SHORT).show();
                 }
-
             }
         });
         return view;
+    }
+
+    private boolean wifiConnected() {
+        ConnectivityManager connManager = (ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+
+        return mWifi.isConnected();
     }
 
     private boolean certificateIsImported() {

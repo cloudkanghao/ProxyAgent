@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.FragmentTransaction;
 
 import android.os.Bundle;
 import android.view.MenuItem;
@@ -42,11 +43,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         toggle.syncState();
 
         // Initialize
+//        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, settingFragment).addToBackStack(null).commit();
         getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, homeFragment).addToBackStack(null).commit();
     }
 
     @Override
-    public boolean onNavigationItemSelected(@NonNull @org.jetbrains.annotations.NotNull MenuItem item) {
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         switch(item.getItemId()) {
             case R.id.menu_setting:
 
@@ -79,4 +81,5 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         else
             super.onBackPressed();
     }
+
 }
