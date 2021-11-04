@@ -1,8 +1,12 @@
 package com.kh.proxyagent.Fragments;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,9 +16,13 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+
+import com.kh.proxyagent.Foreground.ForegroundBuilder;
 import com.kh.proxyagent.R;
 
 import java.io.DataOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -59,53 +67,56 @@ public class HomeFragment extends Fragment {
                 @Override
                 public void onClick(View v) {
                     if (variableSet) {
-                        if (!toggle) {
+                        if(wifiConnected()) {
+                            if (!toggle) {
 
-                            try {
-                                Process su = Runtime.getRuntime().exec("su");
-                                DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+                                try {
+                                    Process su = Runtime.getRuntime().exec("su");
+                                    DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
 
-                                outputStream.writeBytes("settings put global http_proxy " + proxyAddress + ":" + port + "\n");
-                                outputStream.flush();
+                                    outputStream.writeBytes("settings put global http_proxy " + proxyAddress + ":" + port + "\n");
+                                    outputStream.flush();
 
-                                outputStream.writeBytes("exit\n");
-                                outputStream.flush();
-                                su.waitFor();
-                                powerButton.setImageResource(R.drawable.stop_button);
-                                toggle = true;
-                            } catch (Exception e) {
-                                e.printStackTrace();
+                                    outputStream.writeBytes("exit\n");
+                                    outputStream.flush();
+                                    su.waitFor();
+
+                                    powerButton.setImageResource(R.drawable.stop_button);
+                                    toggle = true;
+                                    startForegroundService();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    Log.e("tag", e.getMessage());
+                                }
+                            } else {
+                                try {
+                                    Process su = Runtime.getRuntime().exec("su");
+                                    DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+
+                                    outputStream.writeBytes("settings put global http_proxy :0\n");
+                                    outputStream.flush();
+
+                                    outputStream.writeBytes("exit\n");
+                                    outputStream.flush();
+                                    su.waitFor();
+                                    powerButton.setImageResource(R.drawable.power);
+                                    toggle = false;
+                                    stopForegroundService();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
                             }
+                            // Ensure to save state!
+                            SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
+                            SharedPreferences.Editor editor = preferences.edit();
+
+                            editor.putBoolean(TOGGLE_STATE, toggle);
+                            editor.putBoolean(VARIABLE_STATE, variableSet);
+                            editor.commit();
                         }
-                        else {
-//                            try {
-//                                Runtime.getRuntime().exec("settings put global http_proxy :0");
-//                            } catch (IOException e) {
-//                                e.printStackTrace();
-//                            }
-                            try {
-                                Process su = Runtime.getRuntime().exec("su");
-                                DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+                        else
+                            Toast.makeText(getContext(), "Please connect to WiFi", Toast.LENGTH_SHORT).show();
 
-                                outputStream.writeBytes("settings put global http_proxy :0\n");
-                                outputStream.flush();
-
-                                outputStream.writeBytes("exit\n");
-                                outputStream.flush();
-                                su.waitFor();
-                                powerButton.setImageResource(R.drawable.power);
-                                toggle = false;
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-                        // Ensure to save state!
-                        SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
-                        SharedPreferences.Editor editor = preferences.edit();
-
-                        editor.putBoolean(TOGGLE_STATE, toggle);
-                        editor.putBoolean(VARIABLE_STATE, variableSet);
-                        editor.commit();
                     }
                     else
                         Toast.makeText(getContext(), "Proxy settings not set!", Toast.LENGTH_SHORT).show();
@@ -116,29 +127,20 @@ public class HomeFragment extends Fragment {
         return view;
     }
 
-//    private void runtimePermission() {
-//        Dexter.withContext(getContext()).withPermissions(
-//                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-//                Manifest.permission.READ_EXTERNAL_STORAGE
-//        ).withListener(new MultiplePermissionsListener() {
-//
-//            @Override
-//            public void onPermissionsChecked(MultiplePermissionsReport multiplePermissionsReport) {
-//
-//            }
-//
-//            @Override
-//            public void onPermissionRationaleShouldBeShown(List<PermissionRequest> list, PermissionToken permissionToken) {
-//                permissionToken.continuePermissionRequest();
-//            }
-//        }).check();
-//    }
+    private boolean wifiConnected() {
+        ConnectivityManager connManager = (ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
 
-//    @Override
-//    public void onSaveInstanceState(@NonNull Bundle outState) {
-//        super.onSaveInstanceState(outState);
-//        outState.putBoolean(TOGGLE_STATE, toggle);
-//        outState.putBoolean(VARIABLE_STATE, variableSet);
-//        Toast.makeText(getContext(), "save state toggle: " + toggle, Toast.LENGTH_SHORT).show();
-//    }
+        return mWifi.isConnected();
+    }
+
+    private void startForegroundService() {
+        Intent serviceIntent = new Intent(getContext(), ForegroundBuilder.class);
+        getContext().startService(serviceIntent);
+    }
+
+    private void stopForegroundService() {
+        Intent serviceIntent = new Intent(getContext(), ForegroundBuilder.class);
+        getContext().stopService(serviceIntent);
+    }
 }

@@ -10,6 +10,7 @@ import androidx.fragment.app.FragmentTransaction;
 
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.google.android.material.navigation.NavigationView;
 import com.kh.proxyagent.Fragments.HomeFragment;
@@ -26,6 +27,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if(!hasRootPrivilege())
+            Toast.makeText(this, "App requires root privilege to function properly!", Toast.LENGTH_LONG).show();
 
         homeFragment = new HomeFragment();
         settingFragment = new SettingFragment();
@@ -80,6 +84,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             drawerLayout.closeDrawer(GravityCompat.START);
         else
             super.onBackPressed();
+    }
+
+    private boolean hasRootPrivilege() {
+        boolean executed;
+        try {
+            Runtime.getRuntime().exec("which su");
+            executed = true;
+        } catch (Exception e) {
+            executed = false;
+        }
+        return executed;
     }
 
 }
