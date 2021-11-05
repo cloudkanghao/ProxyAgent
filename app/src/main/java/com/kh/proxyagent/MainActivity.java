@@ -8,13 +8,22 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.Toast;
 
 import com.google.android.material.navigation.NavigationView;
 import com.kh.proxyagent.Fragments.HomeFragment;
 import com.kh.proxyagent.Fragments.SettingFragment;
+
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
@@ -61,6 +70,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             case R.id.menu_home:
                 getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, homeFragment).addToBackStack(null).commit();
                 break;
+
+            /*****************************
+             * FIXED THE MENU DISPLAY AND ADD BUTTON OR MENU TO IMPORT CERTIFICATE
+             *****************************/
+//            case R.id.certficiate_setting:
+//
 //            case R.id.nav_internal:
 //                InternalFragment internalFragment = new InternalFragment();
 //                getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, internalFragment).addToBackStack(null).commit();
@@ -79,22 +94,91 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     public void onBackPressed() {
-        getSupportFragmentManager().popBackStackImmediate();
-        if(drawerLayout.isDrawerOpen(GravityCompat.START))
-            drawerLayout.closeDrawer(GravityCompat.START);
-        else
-            super.onBackPressed();
+        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, homeFragment).addToBackStack(null).commit();
     }
 
     private boolean hasRootPrivilege() {
-        boolean executed;
+        return executeCommand("whoami");
+    }
+
+    public static String executeCommandWithOutput(String command) {
         try {
-            Runtime.getRuntime().exec("which su");
-            executed = true;
-        } catch (Exception e) {
-            executed = false;
+            // Executes the command.
+            Process su = Runtime.getRuntime().exec("su");
+            DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(su.getInputStream()));
+
+            outputStream.writeBytes(command + "\n");
+            outputStream.flush();
+
+            outputStream.writeBytes("exit\n");
+            outputStream.flush();
+            int read;
+            char[] buffer = new char[4096];
+            StringBuffer output = new StringBuffer();
+            while ((read = reader.read(buffer)) > 0) {
+                output.append(buffer, 0, read);
+            }
+            reader.close();
+
+            // Waits for the command to finish.
+            su.waitFor();
+
+
+            return output.toString();
+        } catch (IOException e) {
+            return "";
+        } catch (InterruptedException e) {
+            return "";
         }
-        return executed;
+
+    }
+    public static boolean executeCommand(String command) {
+
+        try {
+            Process su = Runtime.getRuntime().exec("su");
+            DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+
+            outputStream.writeBytes(command + "\n");
+            outputStream.flush();
+
+            outputStream.writeBytes("exit\n");
+            outputStream.flush();
+            su.waitFor();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public void onClickImportCert(View view) {
+        AlertDialog.Builder mBuilder = new AlertDialog.Builder(this);
+        View mView = getLayoutInflater().inflate(R.layout.cert_dialog_nocheck, null);
+
+        Button yes = mView.findViewById(R.id.yesButton);
+        Button cancel = mView.findViewById(R.id.cancelButton);
+
+        mBuilder.setView(mView);
+        AlertDialog dialog = mBuilder.create();
+
+        yes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+
+                settingFragment.installCertificate();
+            }
+        });
+        cancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(getApplicationContext(), "Operation cancelled", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            }
+        });
+        dialog.show();
     }
 
 }

@@ -10,7 +10,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -18,11 +20,18 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.kh.proxyagent.Foreground.ForegroundBuilder;
+import com.kh.proxyagent.HttpAsync.CallbackFuture;
+import com.kh.proxyagent.MainActivity;
 import com.kh.proxyagent.R;
 
 import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.concurrent.ExecutionException;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -30,10 +39,14 @@ public class HomeFragment extends Fragment {
 
     private View view;
     private ImageButton powerButton;
-    private boolean toggle, variableSet;
-    private String proxyAddress, port;
+    private TextView ipInterface;
+    private CheckBox checkBox;
+    private boolean toggle, variableSet, interfaceCheck;
+    private String proxyAddress, port, interfaceValue;
     private final String VARIABLE_STATE = "variableSetState";
     private final String TOGGLE_STATE = "toggleState";
+    private final String CHECK_STATE = "connectState";
+    private final String INTERFACE_STATE = "interfaceState";
 
     @Nullable
     @Override
@@ -41,11 +54,18 @@ public class HomeFragment extends Fragment {
         view = inflater.inflate(R.layout.fragment_home, container, false);
 
         powerButton = view.findViewById(R.id.powerButton);
+        ipInterface = view.findViewById(R.id.ipInterface);
+        checkBox = view.findViewById(R.id.checkBox);
 
         // Get saved state
         SharedPreferences preferences = this.getActivity().getPreferences(Context.MODE_PRIVATE);
         toggle = preferences.getBoolean(TOGGLE_STATE, false);
         variableSet = preferences.getBoolean(VARIABLE_STATE, false);
+        interfaceCheck = preferences.getBoolean(CHECK_STATE, false);
+        interfaceValue = preferences.getString(INTERFACE_STATE, "not connected");
+
+        ipInterface.setText(interfaceValue);
+        checkBox.setChecked(interfaceCheck);
 
         if (toggle)
             powerButton.setImageResource(R.drawable.stop_button);
@@ -68,48 +88,30 @@ public class HomeFragment extends Fragment {
                 public void onClick(View v) {
                     if (variableSet) {
                         if(wifiConnected()) {
-                            if (!toggle) {
-
-                                try {
-                                    Process su = Runtime.getRuntime().exec("su");
-                                    DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
-
-                                    outputStream.writeBytes("settings put global http_proxy " + proxyAddress + ":" + port + "\n");
-                                    outputStream.flush();
-
-                                    outputStream.writeBytes("exit\n");
-                                    outputStream.flush();
-                                    su.waitFor();
-
+                            boolean hasConnection = testConnection();
+                            if (!toggle && hasConnection) {
+                                if(MainActivity.executeCommand("settings put global http_proxy " + proxyAddress + ":" + port)) {
                                     powerButton.setImageResource(R.drawable.stop_button);
                                     toggle = true;
+                                    interfaceCheck = true;
                                     startForegroundService();
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                    Log.e("tag", e.getMessage());
                                 }
-                            } else {
-                                try {
-                                    Process su = Runtime.getRuntime().exec("su");
-                                    DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
 
-                                    outputStream.writeBytes("settings put global http_proxy :0\n");
-                                    outputStream.flush();
-
-                                    outputStream.writeBytes("exit\n");
-                                    outputStream.flush();
-                                    su.waitFor();
+                            }
+                            else {
+                                if(MainActivity.executeCommand("settings put global http_proxy :0")) {
                                     powerButton.setImageResource(R.drawable.power);
                                     toggle = false;
                                     stopForegroundService();
-                                } catch (Exception e) {
-                                    e.printStackTrace();
+                                    interfaceCheck = false;
                                 }
                             }
+                            checkBox.setChecked(interfaceCheck);
+
                             // Ensure to save state!
                             SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
                             SharedPreferences.Editor editor = preferences.edit();
-
+                            editor.putBoolean(CHECK_STATE, interfaceCheck);
                             editor.putBoolean(TOGGLE_STATE, toggle);
                             editor.putBoolean(VARIABLE_STATE, variableSet);
                             editor.commit();
@@ -125,6 +127,39 @@ public class HomeFragment extends Fragment {
         );
 
         return view;
+    }
+
+    private void proxySetting(boolean on) {
+        if (on)
+            MainActivity.executeCommand("settings put global http_proxy " + proxyAddress + ":" + port);
+        else
+            MainActivity.executeCommand("settings put global http_proxy :0");
+    }
+
+    private boolean testConnection() {
+        try {
+            proxySetting(true);
+            String url = "http://burp";
+            Request request = new Request.Builder().url(url).build();
+            OkHttpClient client = new OkHttpClient();
+
+            CallbackFuture future = new CallbackFuture();
+            client.newCall(request).enqueue(future);
+            Response response = future.get(); // To get async operation to sync operation
+
+            if (response.isSuccessful()) {
+                proxySetting(false);
+                return true;
+            }
+            else {
+                proxySetting(false);
+                return false;
+            }
+        }
+        catch (InterruptedException | ExecutionException e) {
+            proxySetting(false);
+            return false;
+        }
     }
 
     private boolean wifiConnected() {

@@ -16,15 +16,19 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.kh.proxyagent.HttpAsync.CallbackFuture;
 import com.kh.proxyagent.MainActivity;
 import com.kh.proxyagent.R;
 
 import org.jetbrains.annotations.NotNull;
+import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -35,6 +39,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.concurrent.ExecutionException;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -49,8 +54,12 @@ public class SettingFragment extends Fragment {
     private View view;
     private EditText proxyAddress, port;
     private Button saveButton;
+    private TextView certImportText;
+    private ImageView certImportImage;
     private boolean doNotShowAgain;
     private final String TOGGLE_STATE = "toggleState";
+    private final String CHECK_STATE = "connectState";
+    private final String INTERFACE_STATE = "interfaceState";
 
     @Nullable
     @Override
@@ -59,6 +68,8 @@ public class SettingFragment extends Fragment {
         proxyAddress = view.findViewById(R.id.proxyAddress);
         port = view.findViewById(R.id.port);
         saveButton = view.findViewById(R.id.settingSubmit);
+        certImportText = view.findViewById(R.id.certImportText);
+        certImportImage = view.findViewById(R.id.certImportImage);
 
         SharedPreferences preferences = this.getActivity().getPreferences(MODE_PRIVATE);
 
@@ -87,6 +98,8 @@ public class SettingFragment extends Fragment {
 
                         editor.putString("proxyAddress", proxyAddressValue);
                         editor.putString("port", portValue);
+                        editor.putBoolean(CHECK_STATE, false);
+                        editor.putString(INTERFACE_STATE, proxyAddressValue + ":" + portValue);
                         editor.commit();
 
                         Bundle bundle = new Bundle();
@@ -96,45 +109,74 @@ public class SettingFragment extends Fragment {
                         homeFragment.setArguments(bundle);
                         getFragmentManager().beginTransaction().replace(R.id.fragment_container, homeFragment).commit();
 
-                        if (certificateIsImported())
-                            Toast.makeText(getContext(), "Setting updated!", Toast.LENGTH_SHORT).show();
-                        else {
-                            if(!doNotShowAgain) {
-                                AlertDialog.Builder mBuilder = new AlertDialog.Builder(getContext());
-                                View mView = getLayoutInflater().inflate(R.layout.cert_dialog, null);
+                        // check if there is a connection
+                        if(testConnection()) {
+                            if (certificateIsImported())
+                                Toast.makeText(getContext(), "Setting updated!", Toast.LENGTH_SHORT).show();
+                            else {
+                                if (!doNotShowAgain) {
+                                    AlertDialog.Builder mBuilder = new AlertDialog.Builder(getContext());
+                                    View mView = getLayoutInflater().inflate(R.layout.cert_dialog, null);
 
-                                Button yes = mView.findViewById(R.id.yesButton);
-                                Button cancel = mView.findViewById(R.id.cancelButton);
-                                CheckBox check = mView.findViewById(R.id.checkBox);
+                                    Button yes = mView.findViewById(R.id.yesButton);
+                                    Button cancel = mView.findViewById(R.id.cancelButton);
+                                    CheckBox check = mView.findViewById(R.id.checkBox);
 
-                                mBuilder.setView(mView);
-                                AlertDialog dialog = mBuilder.create();
+                                    mBuilder.setView(mView);
+                                    AlertDialog dialog = mBuilder.create();
 
-                                yes.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        dialog.dismiss();
-                                        proxySetting(true);
-                                        installCertificate();
-                                    }
-                                });
-                                cancel.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        Toast.makeText(getContext(), "Operation cancelled", Toast.LENGTH_SHORT).show();
-                                        if(check.isChecked()) {
-                                            doNotShowAgain = true;
-                                            editor.putBoolean("doNotShowAgain", doNotShowAgain);
-                                            editor.commit();
+                                    yes.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            dialog.dismiss();
+                                            installCertificate();
                                         }
-                                        dialog.dismiss();
-                                    }
-                                });
-                                dialog.show();
+                                    });
+                                    cancel.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            Toast.makeText(getContext(), "Operation cancelled", Toast.LENGTH_SHORT).show();
+                                            if (check.isChecked()) {
+                                                doNotShowAgain = true;
+                                                editor.putBoolean("doNotShowAgain", doNotShowAgain);
+                                                editor.commit();
+                                            }
+                                            dialog.dismiss();
+                                        }
+                                    });
+                                    dialog.show();
+                                }
                             }
                         }
-                    } else {
+                        // if ip/port is incorrect
+                        else {
+                            AlertDialog.Builder mBuilder = new AlertDialog.Builder(getContext());
+                            View mView = getLayoutInflater().inflate(R.layout.connection_dialog, null);
+
+                            Button yes = mView.findViewById(R.id.yesButton);
+
+                            mBuilder.setView(mView);
+                            AlertDialog dialog = mBuilder.create();
+
+                            yes.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    dialog.dismiss();
+                                }
+                            });
+                            dialog.show();
+                            editor.putBoolean(CHECK_STATE, false);
+                            editor.putString(INTERFACE_STATE, "not connected");
+                        }
+                    }
+                    // if there is no wifi connection
+                    else {
                         Toast.makeText(getContext(), "invalid IP or port", Toast.LENGTH_SHORT).show();
+                        SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putBoolean(CHECK_STATE, false);
+                        editor.putString(INTERFACE_STATE, "Not connected");
+                        editor.commit();
                     }
                 }
                 else {
@@ -154,93 +196,75 @@ public class SettingFragment extends Fragment {
 
     private boolean certificateIsImported() {
         File cert = new File(getContext().getFilesDir(), "burp.der");
-        if (cert.exists())
+        if (cert.exists() || checkBurpCert())
             return true;
         else
             return false;
     }
 
-    private void proxySetting(boolean on) {
-        if (on) {
-            try {
-                Process su = Runtime.getRuntime().exec("su");
-                DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+    public void proxySetting(boolean on) {
+        if (on)
+            MainActivity.executeCommand("settings put global http_proxy " + proxyAddress.getText().toString() + ":" + port.getText().toString());
+        else
+            MainActivity.executeCommand("settings put global http_proxy :0");
+    }
 
-                outputStream.writeBytes("settings put global http_proxy " + proxyAddress.getText().toString() + ":" + port.getText().toString() + "\n");
-                outputStream.flush();
+    public boolean testConnection() {
+        try {
+            proxySetting(true);
+            String url = "http://burp";
+            Request request = new Request.Builder().url(url).build();
+            OkHttpClient client = new OkHttpClient();
 
-                outputStream.writeBytes("exit\n");
-                outputStream.flush();
-                su.waitFor();
+            CallbackFuture future = new CallbackFuture();
+            client.newCall(request).enqueue(future);
+            Response response = future.get(); // To get async operation to sync operation
 
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (response.isSuccessful()) {
+                proxySetting(false);
+                return true;
+            }
+            else {
+                proxySetting(false);
+                return false;
             }
         }
-        else {
-            try {
-                Process su = Runtime.getRuntime().exec("su");
-                DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
-
-                outputStream.writeBytes("settings put global http_proxy :0\n");
-                outputStream.flush();
-
-                outputStream.writeBytes("exit\n");
-                outputStream.flush();
-                su.waitFor();
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        catch (InterruptedException | ExecutionException e) {
+            proxySetting(false);
+            return false;
         }
     }
 
-    private void installCertificate() {
+    public void installCertificate() {
+        try {
+            proxySetting(true);
+            String url = "http://burp/cert";
+            Request request = new Request.Builder().url(url).build();
+            OkHttpClient client = new OkHttpClient();
 
-        String url = "http://burp/cert";
-        Request request = new Request.Builder().url(url).build();
-        OkHttpClient client = new OkHttpClient();
+            CallbackFuture future = new CallbackFuture();
+            client.newCall(request).enqueue(future);
+            Response response = future.get(); // To get async operation to sync operation
 
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                e.printStackTrace();
+            if (response.isSuccessful()) {
+                byte[] res = response.body().bytes();
+                saveBurpDerFile(res);
+                convertDerToPem();
+                proxySetting(false);
+                if (moveCertToRootAuthority()) {
+                    MainActivity.executeCommand("reboot");
+                } else
+                    Toast.makeText(getContext(), "Error importing certificate!", Toast.LENGTH_SHORT).show();
             }
+        }
+        catch (IOException | InterruptedException | ExecutionException e) {
 
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                if(response.isSuccessful()) {
-                    byte[] res = response.body().bytes();
-
-                    saveBurpDerFile(res);
-                    convertDerToPem();
-                    proxySetting(false);
-                    if(moveCertToRootAuthority()) {
-                        try {
-                            Process su = Runtime.getRuntime().exec("su");
-                            DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
-
-                            outputStream.writeBytes("reboot\n");
-                            outputStream.flush();
-
-                            outputStream.writeBytes("exit\n");
-                            outputStream.flush();
-                            su.waitFor();
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    else
-                        Log.e("thread", "ERROR IMPORTING CERT!");
-                }
-            }
-        });
+        }
     }
 
     private String convertToBase64(File file) throws IOException {
 
-        InputStream inputStream = null;//You can get an inputStream using any IO API
+        InputStream inputStream = null;
         inputStream = new FileInputStream(file);
         byte[] buffer = new byte[8192];
         int bytesRead;
@@ -293,48 +317,18 @@ public class SettingFragment extends Fragment {
 
     private boolean moveCertToRootAuthority() {
         //9a5ba575.0
-        try {
-            Process su = Runtime.getRuntime().exec("su");
-            DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
-
-            outputStream.writeBytes("mv " + getContext().getFilesDir() + "/burp.pem /system/etc/security/cacerts/9a5ba575.0\n");
-            outputStream.flush();
-
-            outputStream.writeBytes("exit\n");
-            outputStream.flush();
-            su.waitFor();
-
-            Process su2 = Runtime.getRuntime().exec("su");
-            DataOutputStream outputStream2 = new DataOutputStream(su2.getOutputStream());
-
-            outputStream2.writeBytes("chmod 644 /system/etc/security/cacerts/9a5ba575.0\n");
-            outputStream2.flush();
-
-            outputStream2.writeBytes("exit\n");
-            outputStream2.flush();
-            su2.waitFor();
-            return true;
-//            Toast.makeText(getContext(), "Certificate imported successfully!", Toast.LENGTH_SHORT).show();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
+        if(MainActivity.executeCommand("mv " + getContext().getFilesDir() + "/burp.pem /system/etc/security/cacerts/9a5ba575.0"))
+            if(MainActivity.executeCommand("chmod 644 /system/etc/security/cacerts/9a5ba575.0"))
+                return true;
+        return false;
     }
 
-//    private boolean runCommand(String command) {
-//        try {
-//            Process su = Runtime.getRuntime().exec("su");
-//            DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
-//
-//            outputStream.writeBytes(command + "\n");
-//            outputStream.flush();
-//
-//            outputStream.writeBytes("exit\n");
-//            outputStream.flush();
-//            su.waitFor();
-//            return true;
-//        } catch (IOException | InterruptedException e) {
-//            return false;
-//        }
-//    }
+    private boolean checkBurpCert() {
+        String output = MainActivity.executeCommandWithOutput("ls -l /system/etc/security/cacerts/9a5ba575.0");
+//        String output = MainActivity.executeCommandWithOutput("ls -l /system/etc/security/cacerts/randomtest.0");
+        if(output.equals(""))
+            return false;
+        else
+            return true;
+    }
 }
