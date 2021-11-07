@@ -252,8 +252,6 @@ public class SettingFragment extends Fragment {
                 convertDerToPem();
                 proxySetting(false);
                 if (moveCertToUserCert()) {
-                    // /data/user/0/com.kh.proxyagent/files
-                    //cat /system/etc/security/cacerts/9a5ba575.0
                     MainActivity.executeCommand("reboot");
                 } else
                     Toast.makeText(getContext(), "Error importing certificate!", Toast.LENGTH_SHORT).show();
@@ -323,19 +321,11 @@ public class SettingFragment extends Fragment {
             if(MainActivity.executeCommand("chmod 644 /data/misc/user/0/cacerts-added/9a5ba575.0"))
                 return true;
         return false;
-
-//        MainActivity.executeCommand("mount -o rw,remount /system"); // make directory read and write
-//        if(MainActivity.executeCommand("mv " + getContext().getFilesDir() + "/burp.pem /system/etc/security/cacerts/9a5ba575.0"))
-//            if(MainActivity.executeCommand("chmod 644 /system/etc/security/cacerts/9a5ba575.0")) {
-//                MainActivity.executeCommand("mount -o ro,remount /system"); // make directory read only
-//                return true;
-//            }
-//        return false;
     }
 
     private boolean checkBurpCert() {
         String output = MainActivity.executeCommandWithOutput("ls -l /system/etc/security/cacerts/9a5ba575.0");
-//        String output = MainActivity.executeCommandWithOutput("ls -l /system/etc/security/cacerts/randomtest.0");
+
         if(output.equals(""))
             return false;
         else
