@@ -23,7 +23,7 @@ To begin installation, clone the git repo
 ```
 git clone https://github.com/cloudkanghao/ProxyAgent
 ```
-### Proxy Agent (Android Application)
+### Installing Proxy Agent (Android Application)
 
 Run the repo in your Android Studio and push the application in
 
