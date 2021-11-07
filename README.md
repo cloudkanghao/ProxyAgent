@@ -1,6 +1,6 @@
 # Proxy Agent
 
-Proxy Agent is a tool that is created to ease the proxy connection setup process between a rooted Android device to a computer that is running BurpSuite. The goal of Proxy Agent is to enable seamless proxy set up experience for Mobile Pentesters/Security Researcher which would allow them to focus their attention on discovering new security vulnerabilities rather than getting stuck setting up the proxy settings.
+Proxy Agent is a tool that is created to ease the proxy connection setup process between a rooted Android device to a computer that is running BurpSuite. The goal of Proxy Agent is to enable seamless proxy set up experience for Mobile Pentesters/Security Researcher which would allow them to focus their attention on discovering new security vulnerabilities rather than getting stuck setting up the proxy settings including importing of Burp CA Certificate.
 
 Proxy Agent consists of Proxy Agent, an Android Application and Proxy Agent Add-on, a Magisk module. The Android Application provides the UI for the user and holds most of the functions that are needed to run the tool, while the Magisk module helps moving the Burp's CA Certificate from the user store to the system store. The Magisk module is inspired by [MagiskTrustUserCerts](https://github.com/NVISOsecurity/MagiskTrustUserCerts) which almost does the same function with the Proxy Agent Add-on, only with slight modification. If you have MagiskTrustUserCerts installed in your Magisk, you do not need to install the Proxy Agent Add-on.
 
