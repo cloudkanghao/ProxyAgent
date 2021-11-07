@@ -42,6 +42,11 @@ Once it is done, launch Magisk Manager, click on the Modules tab and press `Inst
 
 Locate the `Proxy_Agent_Addon.zip` zip file and install it.
 
+
+## What does it do under the hood?
+
+Something... :) Still writing...
+
 ## What's next?
 
-Right now, I'm working on creating a releases version. For future development, I will be working on making the installation process to enable a more seamless experience approach... To be continue..
+Right now, I'm working on creating a releases version. For future development, I will be working on making the installation process to enable a more seamless experience approach... To be continued..
