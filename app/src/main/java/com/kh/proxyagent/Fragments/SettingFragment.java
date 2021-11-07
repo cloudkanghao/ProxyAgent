@@ -1,4 +1,4 @@
-package com.kh.proxyagent.Fragments;
+ package com.kh.proxyagent.Fragments;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -251,7 +251,9 @@ public class SettingFragment extends Fragment {
                 saveBurpDerFile(res);
                 convertDerToPem();
                 proxySetting(false);
-                if (moveCertToRootAuthority()) {
+                if (moveCertToUserCert()) {
+                    // /data/user/0/com.kh.proxyagent/files
+                    //cat /system/etc/security/cacerts/9a5ba575.0
                     MainActivity.executeCommand("reboot");
                 } else
                     Toast.makeText(getContext(), "Error importing certificate!", Toast.LENGTH_SHORT).show();
@@ -315,12 +317,20 @@ public class SettingFragment extends Fragment {
         fos.write(pem.getBytes());
     }
 
-    private boolean moveCertToRootAuthority() {
+    private boolean moveCertToUserCert() {
         //9a5ba575.0
-        if(MainActivity.executeCommand("mv " + getContext().getFilesDir() + "/burp.pem /system/etc/security/cacerts/9a5ba575.0"))
-            if(MainActivity.executeCommand("chmod 644 /system/etc/security/cacerts/9a5ba575.0"))
+        if(MainActivity.executeCommand("mv "+ getContext().getFilesDir() + "/burp.pem /data/misc/user/0/cacerts-added/9a5ba575.0"))
+            if(MainActivity.executeCommand("chmod 644 /data/misc/user/0/cacerts-added/9a5ba575.0"))
                 return true;
         return false;
+
+//        MainActivity.executeCommand("mount -o rw,remount /system"); // make directory read and write
+//        if(MainActivity.executeCommand("mv " + getContext().getFilesDir() + "/burp.pem /system/etc/security/cacerts/9a5ba575.0"))
+//            if(MainActivity.executeCommand("chmod 644 /system/etc/security/cacerts/9a5ba575.0")) {
+//                MainActivity.executeCommand("mount -o ro,remount /system"); // make directory read only
+//                return true;
+//            }
+//        return false;
     }
 
     private boolean checkBurpCert() {
