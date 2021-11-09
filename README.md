@@ -4,7 +4,7 @@ Proxy Agent is a tool that is created to ease the proxy connection setup process
 
 Proxy Agent consists of Proxy Agent, an Android Application and Proxy Agent Add-on, a Magisk module. The Android Application provides the UI for the user and holds most of the functions that are needed to run the tool, while the Magisk module helps moving the Burp's CA Certificate from the user store to the system store. The Magisk module is inspired by [MagiskTrustUserCerts](https://github.com/NVISOsecurity/MagiskTrustUserCerts) which almost does the same function with the Proxy Agent Add-on, only with slight modification. If you have MagiskTrustUserCerts installed in your Magisk, you do not need to install the Proxy Agent Add-on.
 
-Note: Tested on Android 7 (Nexus 6P) and Android 11 (Google Pixel 3XL)
+Note: Tested on Android 7 (Nexus 6P), Android 10 (Redmi Note 8), and Android 11 (Google Pixel 3XL)
 
 ## Instructions for Installation
 
