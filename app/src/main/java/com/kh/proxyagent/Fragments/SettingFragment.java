@@ -135,7 +135,6 @@ public class SettingFragment extends Fragment {
                                     cancel.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
-                                            Toast.makeText(getContext(), "Operation cancelled", Toast.LENGTH_SHORT).show();
                                             if (check.isChecked()) {
                                                 doNotShowAgain = true;
                                                 editor.putBoolean("doNotShowAgain", doNotShowAgain);

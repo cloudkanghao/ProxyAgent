@@ -134,6 +134,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
 
     }
+
     public static boolean executeCommand(String command) {
 
         try {
@@ -179,6 +180,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         });
         dialog.show();
+    }
+
+    public void onClickSetting(View view) {
+        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, settingFragment).addToBackStack(null).commit();
     }
 
 }
