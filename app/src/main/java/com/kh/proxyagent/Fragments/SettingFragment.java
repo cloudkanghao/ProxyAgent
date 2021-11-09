@@ -317,7 +317,7 @@ public class SettingFragment extends Fragment {
 
     private boolean moveCertToUserCert() {
         //9a5ba575.0
-        if(MainActivity.executeCommand("mv "+ getContext().getFilesDir() + "/burp.pem /data/misc/user/0/cacerts-added/9a5ba575.0"))
+        if(MainActivity.executeCommand("cp "+ getContext().getFilesDir() + "/burp.pem /data/misc/user/0/cacerts-added/9a5ba575.0"))
             if(MainActivity.executeCommand("chmod 644 /data/misc/user/0/cacerts-added/9a5ba575.0"))
                 return true;
         return false;
