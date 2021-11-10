@@ -20,31 +20,27 @@ And... That's it!
 
 To begin installation, download the APK file and Magisk module in the [Release](https://github.com/cloudkanghao/ProxyAgent/releases/tag/v1).
 
-or git clone the repo:
-```
-git clone https://github.com/cloudkanghao/ProxyAgent
-```
 ### Installing Proxy Agent (Android Application)
 
-Firstly, push the `proxy_agent.apk` file into your Android's Download folder.
+1. Push the `proxy_agent.apk` file into your Android's Download folder.
 
 ```
 adb push proxy_agent.apk /storage/emulated/0/Download
 ```
 
-Secondly, install the APK file by clicking on it.
+2. Install the APK file by clicking on it.
 
 ### Installing Proxy Agent Add-on (Magisk Module)
 
-Firstly, push the `Proxy_Agent_Addon.zip` file into your Android's Download folder.
+1. Push the `Proxy_Agent_Addon.zip` file into your Android's Download folder.
 
 ```
 adb push Proxy_Agent_Addon.zip /storage/emulated/0/Download
 ```
 
-Once it is done, launch Magisk Manager, click on the Modules tab and press `Install from storage`.
+2. Once it is done, launch Magisk Manager, click on the Modules tab and press `Install from storage`.
 
-Locate the `Proxy_Agent_Addon.zip` zip file and install it.
+3. Locate the `Proxy_Agent_Addon.zip` zip file and install it.
 
 
 ## What does it do under the hood?
@@ -53,4 +49,4 @@ Something... :) Still writing...
 
 ## What's next?
 
-Right now, I'm working on creating a releases version. For future development, I will be working on making the installation process to enable a more seamless experience approach... To be continued..
+Planning to make the installation easier and adding more features like SSL pinning bypass and more..
