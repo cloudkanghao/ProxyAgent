@@ -41,7 +41,7 @@ adb push Proxy_Agent_Addon.zip /storage/emulated/0/Download
 2. Once it is done, launch Magisk Manager, click on the Modules tab and press `Install from storage`.
 
 3. Locate the `Proxy_Agent_Addon.zip` zip file and install it.
-
+![Proxy Agent Add-on installed](images/magiskinstall.png)
 
 ## What does it do under the hood?
 
