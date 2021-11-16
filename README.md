@@ -45,7 +45,7 @@ adb push Proxy_Agent_Addon.zip /storage/emulated/0/Download
 
 ## I have followed the setup but it still doesn't work?!
 
-1. Tried adb shell on your Android device and do a ping to your computer's IP address that is hosting BurpSuite
+1. Try connecting to adb shell on your Android device and do a ping to your computer's IP address that is hosting BurpSuite
 2. Setup the firewall rule in your computer to allow incoming and outgoing traffic at port 8080 (To your BurpSuite's port)
 3. Try to import BurpSuite CA Certificate again
 
