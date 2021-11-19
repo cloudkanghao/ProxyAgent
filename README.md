@@ -1,4 +1,5 @@
 # Proxy Agent
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Proxy Agent is a tool that is created to ease the proxy connection setup process between a rooted Android device to a computer that is running BurpSuite. The goal of Proxy Agent is to enable seamless proxy setup experience for Mobile Pentesters/Security Researcher that allow them to focus on discovering new security vulnerabilities rather than getting stuck in the proxy setup process including importing of Burp CA Certificate.
 
