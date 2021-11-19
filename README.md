@@ -22,10 +22,10 @@ To begin installation, download the APK file and Magisk module in the [Release](
 
 ### Installing Proxy Agent (Android Application)
 
-1. Push the `proxy_agent.apk` file into your Android's Download folder.
+1. Use the `install` command to install the APK file.
 
 ```
-adb push proxy_agent.apk /storage/emulated/0/Download
+adb install proxyagent.apk
 ```
 
 2. Install the APK file by clicking on it.
