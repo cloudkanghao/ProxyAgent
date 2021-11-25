@@ -39,6 +39,8 @@
     <EditText
         android:id="@+id/proxyAddress"
         android:layout_width="0dp"
+        android:maxLines="1"
+        android:inputType="text"
         android:layout_height="wrap_content"
         app:layout_constraintWidth_percent=".8"
         app:layout_constraintVertical_bias=".3"
@@ -57,6 +59,7 @@
 
     <EditText
         android:id="@+id/port"
+        android:maxLines="1"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Port Number"
