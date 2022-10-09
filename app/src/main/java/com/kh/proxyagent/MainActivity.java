@@ -114,10 +114,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     private boolean hasRootPrivilege() {
-        return executeCommand("whoami");
+        return executeCommand(4);
     }
 
-    public static String executeCommandWithOutput(String command) {
+    public static String executeCommandWithOutput() {
         try {
             // Executes the command.
             Process su = Runtime.getRuntime().exec("su");
@@ -125,7 +125,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(su.getInputStream()));
 
-            outputStream.writeBytes(command + "\n");
+            outputStream.writeBytes( "ls -l /system/etc/security/cacerts/9a5ba575.0\n");
             outputStream.flush();
 
             outputStream.writeBytes("exit\n");
@@ -151,13 +151,61 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     }
 
-    public static boolean executeCommand(String command) {
+    public static boolean executeCommandArgument(int command, String argument) {
+//        cp + getContext().getFilesDir() + /burp.pem /data/misc/user/0/cacerts-added/9a5ba575.0
+//        cp "+ getContext().getFilesDir() + "/burp.pem /data/misc/user/0/cacerts-added/9a5ba575.0"
 
         try {
             Process su = Runtime.getRuntime().exec("su");
             DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+            String commandLine = "";
+            switch(command) {
+                case 1:
+                    commandLine = "settings put global http_proxy " + argument;
+                break;
+                case 2:
+                    commandLine = "cp " + argument + "/burp.pem /data/misc/user/0/cacerts-added/9a5ba575.0";
+                break;
+            }
+            outputStream.writeBytes(commandLine + "\n");
+            outputStream.flush();
 
-            outputStream.writeBytes(command + "\n");
+            outputStream.writeBytes("exit\n");
+            outputStream.flush();
+            su.waitFor();
+            return true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean executeCommand(int command) {
+
+        try {
+
+            Process su = Runtime.getRuntime().exec("su");
+            DataOutputStream outputStream = new DataOutputStream(su.getOutputStream());
+            String commandLine = "";
+
+            switch(command) {
+                case 1:
+                    commandLine = "settings put global http_proxy :0";
+                break;
+                case 2:
+                    commandLine = "chmod 644 /data/misc/user/0/cacerts-added/9a5ba575.0";
+                break;
+                case 3:
+                    commandLine = "ls -l /system/etc/security/cacerts/9a5ba575.0";
+                break;
+                case 4:
+                    commandLine = "whoami";
+                break;
+                case 5:
+                    commandLine = "reboot";
+            }
+            outputStream.writeBytes(commandLine + "\n");
             outputStream.flush();
 
             outputStream.writeBytes("exit\n");

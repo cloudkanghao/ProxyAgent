@@ -221,9 +221,9 @@ public class SettingFragment extends Fragment {
 
     public void proxySetting(boolean on) {
         if (on)
-            MainActivity.executeCommand("settings put global http_proxy " + proxyAddress.getText().toString() + ":" + port.getText().toString());
+            MainActivity.executeCommandArgument(1, proxyAddress.getText().toString() + ":" + port.getText().toString());
         else
-            MainActivity.executeCommand("settings put global http_proxy :0");
+            MainActivity.executeCommand(1);
     }
 
     public boolean testConnection() {
@@ -269,7 +269,7 @@ public class SettingFragment extends Fragment {
                 convertDerToPem();
                 proxySetting(false);
                 if (moveCertToUserCert()) {
-                    MainActivity.executeCommand("reboot");
+                    MainActivity.executeCommand(5);
                 } else
                     Toast.makeText(getContext(), "Error importing certificate!", Toast.LENGTH_SHORT).show();
             }
@@ -327,21 +327,24 @@ public class SettingFragment extends Fragment {
         File file = new File(getContext().getFilesDir(), "burp.der");
         String pem = convertToBase64(file);
         pem = top + pem;
-        pem += bottom;
+        if (pem.endsWith("\n"))
+            pem += bottom;
+        else
+            pem += "\n" + bottom;
         fos = getContext().openFileOutput("burp.pem", MODE_PRIVATE);
         fos.write(pem.getBytes());
     }
 
     private boolean moveCertToUserCert() {
         //9a5ba575.0
-        if(MainActivity.executeCommand("cp "+ getContext().getFilesDir() + "/burp.pem /data/misc/user/0/cacerts-added/9a5ba575.0"))
-            if(MainActivity.executeCommand("chmod 644 /data/misc/user/0/cacerts-added/9a5ba575.0"))
+        if(MainActivity.executeCommandArgument( 2,getContext().getFilesDir() + ""))
+            if(MainActivity.executeCommand(2))
                 return true;
         return false;
     }
 
     private boolean checkBurpCert() {
-        String output = MainActivity.executeCommandWithOutput("ls -l /system/etc/security/cacerts/9a5ba575.0");
+        String output = MainActivity.executeCommandWithOutput();
 
         if(output.equals(""))
             return false;

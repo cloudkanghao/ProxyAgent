@@ -112,7 +112,8 @@ public class HomeFragment extends Fragment {
                             if (!toggle) {
 
                                 if(hasConnection) {
-                                    if (MainActivity.executeCommand("settings put global http_proxy " + proxyAddress + ":" + port)) {
+//                                    MainActivity.executeCommandArgument(1, proxyAddress + ":" + port)
+                                    if (MainActivity.executeCommandArgument(1, proxyAddress + ":" + port)) {
                                         powerButton.setImageResource(R.drawable.stop_button);
                                         toggle = true;
                                         interfaceCheck = true;
@@ -138,7 +139,7 @@ public class HomeFragment extends Fragment {
                                 }
                             }
                             else {
-                                if(MainActivity.executeCommand("settings put global http_proxy :0")) {
+                                if(MainActivity.executeCommand(1)) {
                                     powerButton.setImageResource(R.drawable.power);
                                     toggle = false;
                                     stopForegroundService();
@@ -170,9 +171,9 @@ public class HomeFragment extends Fragment {
 
     private void proxySetting(boolean on) {
         if (on)
-            MainActivity.executeCommand("settings put global http_proxy " + proxyAddress + ":" + port);
+            MainActivity.executeCommandArgument(1, proxyAddress + ":" + port);
         else
-            MainActivity.executeCommand("settings put global http_proxy :0");
+            MainActivity.executeCommand(1);
     }
 
     private boolean testConnection() {
