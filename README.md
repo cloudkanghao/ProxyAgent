@@ -56,6 +56,25 @@ adb push Proxy_Agent_Addon.zip /storage/emulated/0/Download
 2. Setup the firewall rule in your computer to allow incoming and outgoing traffic at port 8080 (To your BurpSuite's port)
 3. Try to import BurpSuite CA Certificate again
 
+## Chrome's Certificate Transparency and Chromium
+If you are facing some certificate issues, I found a [workaround](https://github.com/AdguardTeam/AdguardForAndroid/issues/4124) that could help.
+
+It's basically summary to:
+
+### If installed Magisk version is 23.x or below,
+1. Go to Magisk settings
+2. Turn on Magisk Hide
+3. Add Chrome in Magisk Hide list
+
+### If installed Magisk version is 24.x or above,
+1. Go to Magisk settings
+2. Enable Zygisk
+3. Enable Enforce DenyList
+4. Add Chrome to the DenyList
+
+Lastly, reboot your phone. Chrome should be working for you now. If you are facing similar issues on other apps, just add them to the Magisk Hide list/DenyList.
+
+Note: I'm not really sure if it will work with Magisk Hide, but it works with Zygisk DenyList for sure.
 ## What's next?
 
 1. Plans to make the installation easier
