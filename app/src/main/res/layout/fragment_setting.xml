@@ -36,45 +36,48 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.152" />
 
-    <EditText
+    <AutoCompleteTextView
         android:id="@+id/proxyAddress"
         android:layout_width="0dp"
-        android:maxLines="1"
-        android:inputType="text"
         android:layout_height="wrap_content"
-        app:layout_constraintWidth_percent=".8"
-        app:layout_constraintVertical_bias=".3"
-        app:layout_constraintHorizontal_bias=".5"
-        android:hint="Proxy Address"
-        android:textColorHint="@color/greyOff"
-        android:textColor="@color/white"
         android:background="@drawable/edittext_bg"
+        android:popupBackground="@drawable/suggest_bg"
+        android:hint="Proxy Agent"
+        android:theme="@style/suggestTheme"
+        android:inputType="number"
+        android:digits="0123456789."
+        android:maxLines="1"
         android:paddingLeft="20dp"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
+        android:textColor="@color/white"
+        android:textColorHint="@color/greyOff"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.524"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.278"
+        app:layout_constraintWidth_percent=".8" />
 
     <EditText
         android:id="@+id/port"
-        android:maxLines="1"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:background="@drawable/edittext_bg"
         android:hint="Port Number"
         android:inputType="number"
-        android:background="@drawable/edittext_bg"
+        android:maxLines="1"
         android:paddingLeft="20dp"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
-        android:textColorHint="@color/greyOff"
         android:textColor="@color/white"
+        android:textColorHint="@color/greyOff"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/proxyAddress"
-        app:layout_constraintVertical_bias="0.038"
+        app:layout_constraintVertical_bias="0.061"
         app:layout_constraintWidth_percent=".8" />
 
     <Button
@@ -121,5 +124,6 @@
         app:layout_constraintHorizontal_bias="0.377"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

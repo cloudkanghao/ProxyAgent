@@ -72,7 +72,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         toggle.syncState();
 
         // Initialize
-//        getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, settingFragment).addToBackStack(null).commit();
         getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, homeFragment).addToBackStack(null).commit();
     }
 
@@ -91,17 +90,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
              * FIXED THE MENU DISPLAY AND ADD BUTTON OR MENU TO IMPORT CERTIFICATE
              *****************************/
 //            case R.id.certficiate_setting:
-//
-//            case R.id.nav_internal:
-//                InternalFragment internalFragment = new InternalFragment();
-//                getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, internalFragment).addToBackStack(null).commit();
-//                break;
-//            case R.id.nav_card:
-//                CardFragment cardFragment = new CardFragment();
-//                getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, cardFragment).addToBackStack(null).commit();
-//                break;
-//            case R.id.nav_about:
-//                Toast.makeText(this, "About", Toast.LENGTH_SHORT).show();
         }
 
         drawerLayout.closeDrawer(GravityCompat.START);

@@ -107,12 +107,11 @@ public class HomeFragment extends Fragment {
                 @Override
                 public void onClick(View v) {
                     if (variableSet) {
-                        if(wifiConnected()) {
+                        if(toggle || wifiConnected()) {
                             boolean hasConnection = testConnection();
                             if (!toggle) {
 
                                 if(hasConnection) {
-//                                    MainActivity.executeCommandArgument(1, proxyAddress + ":" + port)
                                     if (MainActivity.executeCommandArgument(1, proxyAddress + ":" + port)) {
                                         powerButton.setImageResource(R.drawable.stop_button);
                                         toggle = true;

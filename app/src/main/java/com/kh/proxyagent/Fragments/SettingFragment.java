@@ -16,6 +16,7 @@
 
 package com.kh.proxyagent.Fragments;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -27,8 +28,11 @@ import android.util.Base64OutputStream;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -55,6 +59,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -70,15 +77,18 @@ import static android.content.Context.MODE_PRIVATE;
 public class SettingFragment extends Fragment {
 
     private View view;
-    private EditText proxyAddress, port;
+    private EditText port;
+    private AutoCompleteTextView proxyAddress;
     private Button saveButton;
     private TextView certImportText;
     private ImageView certImportImage;
     private boolean doNotShowAgain;
-    private final String TOGGLE_STATE = "toggleState";
-    private final String CHECK_STATE = "connectState";
-    private final String INTERFACE_STATE = "interfaceState";
+    private final String TOGGLE_STATE = "toggleState",
+            CHECK_STATE = "connectState",
+            INTERFACE_STATE = "interfaceState",
+            HISTORY = "history";
 
+    @SuppressLint("ClickableViewAccessibility")
     @Nullable
     @Override
     public View onCreateView(@NotNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -91,86 +101,69 @@ public class SettingFragment extends Fragment {
 
         SharedPreferences preferences = this.getActivity().getPreferences(MODE_PRIVATE);
 
+        // reserved
         String proxyAddressValue = preferences.getString("proxyAddress", "");
         String portValue = preferences.getString("port", "");
         doNotShowAgain = preferences.getBoolean("doNotShowAgain", false);
+        ArrayList<String> historyList = getHistory(preferences);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_list_item_1, (List) historyList);
+        proxyAddress.setAdapter(adapter);
         proxyAddress.setText(proxyAddressValue);
+        proxyAddress.setThreshold(0);
+        proxyAddress.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
+                    proxyAddress.showDropDown();
+                }
+                return false;
+            }
+        });
         port.setText(portValue);
 
         saveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String proxyAddressValue = proxyAddress.getText().toString(), portValue = port.getText().toString();
+
+                if(!historyList.contains((proxyAddressValue)))
+                    historyList.add(proxyAddressValue);
                 boolean validPort = true;
                 try {
-                    int intValue = Integer.parseInt(portValue);
+                    Integer.parseInt(portValue);
                 } catch (NumberFormatException e) {
                     validPort = false;
                 }
 
-                if(wifiConnected()) {
-                    if (Patterns.IP_ADDRESS.matcher(proxyAddressValue).matches() && validPort) {
+                if (Patterns.IP_ADDRESS.matcher(proxyAddressValue).matches() && validPort) {
 
-                        SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
-                        SharedPreferences.Editor editor = preferences.edit();
+                    SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
+                    SharedPreferences.Editor editor = preferences.edit();
 
-                        editor.putString("proxyAddress", proxyAddressValue);
-                        editor.putString("port", portValue);
-                        editor.putBoolean(CHECK_STATE, false);
-                        editor.putString(INTERFACE_STATE, proxyAddressValue + ":" + portValue);
-                        editor.commit();
+                    editor.putString("proxyAddress", proxyAddressValue);
+                    editor.putString(HISTORY, historyListToString(historyList));
+                    editor.putString("port", portValue);
+                    editor.putBoolean(CHECK_STATE, false);
+                    editor.putString(INTERFACE_STATE, proxyAddressValue + ":" + portValue);
+                    editor.commit();
 
-                        Bundle bundle = new Bundle();
-                        bundle.putString("proxyAddress", proxyAddressValue);
-                        bundle.putString("port", portValue);
-                        HomeFragment homeFragment = new HomeFragment();
-                        homeFragment.setArguments(bundle);
-                        getFragmentManager().beginTransaction().replace(R.id.fragment_container, homeFragment).commit();
+                    Bundle bundle = new Bundle();
+                    bundle.putString("proxyAddress", proxyAddressValue);
+                    bundle.putString("port", portValue);
+                    HomeFragment homeFragment = new HomeFragment();
+                    homeFragment.setArguments(bundle);
+                    getFragmentManager().beginTransaction().replace(R.id.fragment_container, homeFragment).commit();
 
-                        // check if there is a connection
-                        if(testConnection()) {
-                            if (certificateIsImported())
-                                Toast.makeText(getContext(), "Setting updated!", Toast.LENGTH_SHORT).show();
-                            else {
-                                if (!doNotShowAgain) {
-                                    AlertDialog.Builder mBuilder = new AlertDialog.Builder(getContext());
-                                    View mView = getLayoutInflater().inflate(R.layout.cert_dialog, null);
-
-                                    Button yes = mView.findViewById(R.id.yesButton);
-                                    Button cancel = mView.findViewById(R.id.cancelButton);
-                                    CheckBox check = mView.findViewById(R.id.checkBox);
-
-                                    mBuilder.setView(mView);
-                                    AlertDialog dialog = mBuilder.create();
-
-                                    yes.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            dialog.dismiss();
-                                            installCertificate();
-                                        }
-                                    });
-                                    cancel.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            if (check.isChecked()) {
-                                                doNotShowAgain = true;
-                                                editor.putBoolean("doNotShowAgain", doNotShowAgain);
-                                                editor.commit();
-                                            }
-                                            dialog.dismiss();
-                                        }
-                                    });
-                                    dialog.show();
-                                }
-                            }
-                        }
-                        // if ip/port is incorrect
-                        else {
+                    if (certificateIsImported())
+                        Toast.makeText(getContext(), "Setting updated!", Toast.LENGTH_SHORT).show();
+                    else {
+                        if (!doNotShowAgain) {
                             AlertDialog.Builder mBuilder = new AlertDialog.Builder(getContext());
-                            View mView = getLayoutInflater().inflate(R.layout.connection_dialog, null);
+                            View mView = getLayoutInflater().inflate(R.layout.cert_dialog, null);
 
                             Button yes = mView.findViewById(R.id.yesButton);
+                            Button cancel = mView.findViewById(R.id.cancelButton);
+                            CheckBox check = mView.findViewById(R.id.checkBox);
 
                             mBuilder.setView(mView);
                             AlertDialog dialog = mBuilder.create();
@@ -179,29 +172,51 @@ public class SettingFragment extends Fragment {
                                 @Override
                                 public void onClick(View v) {
                                     dialog.dismiss();
+                                    installCertificate();
+                                }
+                            });
+                            cancel.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    if (check.isChecked()) {
+                                        doNotShowAgain = true;
+                                        editor.putBoolean("doNotShowAgain", doNotShowAgain);
+                                        editor.commit();
+                                    }
+                                    dialog.dismiss();
                                 }
                             });
                             dialog.show();
-                            editor.putBoolean(CHECK_STATE, false);
-                            editor.putString(INTERFACE_STATE, "not connected");
                         }
                     }
-                    // if there is no wifi connection
-                    else {
-                        Toast.makeText(getContext(), "invalid IP or port", Toast.LENGTH_SHORT).show();
-                        SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
-                        SharedPreferences.Editor editor = preferences.edit();
-                        editor.putBoolean(CHECK_STATE, false);
-                        editor.putString(INTERFACE_STATE, "Not connected");
-                        editor.commit();
-                    }
                 }
+                // if ip/port is incorrect
                 else {
-                    Toast.makeText(getContext(), "Please connect to WiFi", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "invalid IP or port", Toast.LENGTH_SHORT).show();
+                    SharedPreferences preferences = getActivity().getPreferences(MODE_PRIVATE);
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putBoolean(CHECK_STATE, false);
+                    editor.putString(INTERFACE_STATE, "Not connected");
+                    editor.commit();
                 }
             }
         });
         return view;
+    }
+
+    private ArrayList<String> getHistory(SharedPreferences preferences) {
+        String history = preferences.getString(HISTORY, "");
+        return new ArrayList<String>(Arrays.asList(history.split(",")));
+    }
+
+    private String historyListToString(ArrayList<String> historyList) {
+        String history = "";
+        for (String entry : historyList) {
+            history += entry + ",";
+        }
+        history = history.substring(0, history.length() - 1);
+
+        return history;
     }
 
     private boolean wifiConnected() {
